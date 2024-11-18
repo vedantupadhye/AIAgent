@@ -1,0 +1,131 @@
+
+
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from dotenv import load_dotenv
+import os
+import sqlite3
+import google.generativeai as genai
+
+load_dotenv()
+
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+app = FastAPI()
+
+column_synonyms = {
+    "slab": ["input material", "raw material"],
+    "slab weight": ["input weight", "raw material weight"],
+    "coil": ["product", "production", "output material", "Batch", "Hot Coil", "Rolled Coil"],
+    "steel grade": ["steel grade", "coil grade", "material grade", "tdc grade", "output material grade"],
+    "coil thickness": ["output material thickness", "product thickness", "production thickness", "Batch thickness", "Hot Thickness"],
+    "coil width": ["output material width", "product width", "production width", "Batch width", "Hot Width"],
+    "Coil weight": ["output material weight", "product weight", "production weight", "Plant Production", "Hot Metal Produced", "HSM Output", "Rolling Weight", "Hot Rolling Weight"],
+    "target coil thickness": ["order thickness", "target thickness", "tdc thickness", "Modified Thickness"],
+    "Target coil width": ["order width", "target width", "tdc width", "Modified Width"],
+    "line running time": ["line running time", "Plant Running running time"],
+    "Production duration" : [" Coil Running Time", "Time for Production", "Time taken to Produce the coil"],
+    "idle time": ["available time", "total available time"],
+    "running time percentage": ["running time %", "running time percentage"],
+    "idle time percentage": ["idle time %", "idle time percentage"],
+    "Production Start Time": ["Coil Start Time", "Rolling Start Time"],
+    "Coil Production Time": ["Coil End Time", "Rolling End Time", "Time of Production", "Production Time", "Rolling Finish Time", "DC Out Time"],
+    "shift a": ["shift A", "06:00:00 to 13:59:59"],
+    "shift b": ["shift B", "14:00:00 to 21:59:59"],
+    "shift c": ["shift C", "22:00:00 to 05:59:59"]
+}
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Allow your frontend to access the backend
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+def check_for_synonyms(question):
+    best_match = None
+    best_match_length = 0
+    
+    # Lowercase the question to make matching case-insensitive
+    question_lower = question.lower()
+    
+    # Iterate through the column synonyms
+    for column, synonyms in column_synonyms.items():
+        for synonym in synonyms:
+            synonym_lower = synonym.lower()
+            # Check if synonym is in question and if it's the longest match found so far
+            if synonym_lower in question_lower and len(synonym_lower) > best_match_length:
+                best_match = column
+                best_match_length = len(synonym_lower)
+                
+    return best_match
+
+def get_gemini_response(question, prompt):
+    model = genai.GenerativeModel('gemini-pro')
+    response = model.generate_content([prompt[0], question])
+    return response.text
+
+prompt=[]
+
+
+def read_sql_query(sql, db):
+    try:
+        conn = sqlite3.connect(db)
+        cur = conn.cursor()
+        cur.execute(sql)
+        rows = cur.fetchall()
+        conn.commit()
+        conn.close()
+        return rows
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error executing SQL query: {e}")
+
+
+    conn = sqlite3.connect(db)
+    cur = conn.cursor()
+    cur.execute(sql)
+    rows = cur.fetchall()
+    conn.commit()
+    conn.close()
+    return rows
+# Define the POST request for receiving the user query and action
+class QueryRequest(BaseModel):
+    question: str
+    action: str
+
+@app.post("/query")
+async def query(request: QueryRequest):
+    question = request.question
+    action = request.action
+    
+    if action == "suggest":
+        synonym_match = check_for_synonyms(question)
+        if synonym_match:
+            return {"suggestion": f"Do you mean '{synonym_match}'?"}
+        else:
+            return {"message": "No suggestions found."}
+    
+    # Generate SQL query using Gemini
+    sql_query = get_gemini_response(question, ['prompt'])
+    data = read_sql_query(sql_query, "results.db")
+    
+    if data:
+        return {"sql_query": sql_query, "response": data}
+    else:
+        return {"message": "No data found for the query."}
+
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the SQL Query API"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+
+
+
+
