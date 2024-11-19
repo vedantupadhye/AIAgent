@@ -45,6 +45,7 @@
 # }
 
 # # Function to check for the best matching synonym in the user question
+
 # def check_for_synonyms(question):
 #     best_match = None
 #     best_match_length = 0
@@ -56,7 +57,7 @@
 #     for column, synonyms in column_synonyms.items():
 #         for synonym in synonyms:
 #             synonym_lower = synonym.lower()
-#             # Check if synonym is in question and if it's the longest match found so far
+#            
 #             if synonym_lower in question_lower and len(synonym_lower) > best_match_length:
 #                 best_match = column
 #                 best_match_length = len(synonym_lower)
@@ -529,6 +530,7 @@
 # import sqlite3
 
 # # Load Gemini model and provide SQL query as response
+
 # def get_gemini_response(question, prompt):
 #     model = genai.GenerativeModel('gemini-pro')
 #     response = model.generate_content([prompt[0], question])
@@ -614,7 +616,7 @@
 
 
 
-# FLASK WITH NEXTJS
+# # fastAPI WITH NEXTJS
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -642,6 +644,7 @@ app.add_middleware(
 
 class Question(BaseModel):
     text: str
+
 prompt = [
     '''
      You are an expert in converting English questions to SQL queries! The SQL database contains a table named RESULT with the following columns:
@@ -1102,6 +1105,46 @@ Make sure to provide an SQL query without including '
     '''
 ]
 
+column_synonyms = {
+    "slab": ["input material", "raw material", "slab"],
+    "slab weight": ["slab weight","input weight", "raw material weight"],
+    "coil": [ "coil","product", "production", "output material", "Batch", "Hot Coil", "Rolled Coil"],
+    "steel grade": ["steel grade","steel grade", "coil grade", "material grade", "tdc grade", "output material grade"],
+    "coil thickness": [ "coil thickness","output material thickness", "product thickness", "production thickness", "Batch thickness", "Hot Thickness"],
+    "coil width": [ "coil width","output material width", "product width", "production width", "Batch width", "Hot Width"],
+    "coil weight": [   "coil weight","output material weight", "product weight", "production weight", "Plant Production", "Hot Metal Produced", "HSM Output", "Rolling Weight", "Hot Rolling Weight"],
+    "target coil thickness": ["target coil thickness","order thickness", "target thickness", "tdc thickness", "Modified Thickness"],
+    "target coil width": ["target coil width","order width", "target width", "tdc width", "Modified Width"],
+    "line running time": ["line running time", "Plant Running running time"],
+    "Production duration" : [ "Production duration" ," Coil Running Time", "Time for Production", "Time taken to Produce the coil"],
+    "idle time": ["idle time","available time", "total available time"],
+    "running time percentage": ["running time percentage","running time %", "running time percentage"],
+    "idle time percentage": ["idle time percentage", "idle time %", "idle time percentage"],
+    "production Start Time": [ "Production Start Time","Coil Start Time", "Rolling Start Time"],
+    "coil Production Time": ["Coil Production Time","Coil End Time", "Rolling End Time", "Time of Production", "Production Time", "Rolling Finish Time", "DC Out Time"],
+    "shift a": ["shift A", "06:00:00 to 13:59:59"],
+    "shift b": ["shift B", "14:00:00 to 21:59:59"],
+    "shift c": ["shift C", "22:00:00 to 05:59:59"]
+}
+
+
+def check_for_synonyms(question):
+    best_match = None
+    best_match_length = 0
+    
+    question_lower = question.lower()
+    
+    for column, synonyms in column_synonyms.items():
+        for synonym in synonyms:
+            synonym_lower = synonym.lower()
+            # checks longest found syn
+            if synonym_lower in question_lower and len(synonym_lower) > best_match_length:
+                best_match = column
+                best_match_length = len(synonym_lower)
+                
+    return best_match
+
+
 
 def get_gemini_response(question):
     model = genai.GenerativeModel('gemini-pro')
@@ -1117,12 +1160,22 @@ def read_sql_query(sql, db):
     conn.close()
     return rows
 
+ 
+
 @app.post("/query")
 async def query(question: Question):
     try:
+        
         sql_query = get_gemini_response(question.text)
+        synonym = check_for_synonyms(question.text)
+        
+        # "Do you mean X?"
+        do_you_mean = f"Do you mean '{synonym}'?" if synonym else None
+        
+        # Execute query
         data = read_sql_query(sql_query, "results.db")
-        return {"query": sql_query, "results": data}
+        
+        return {"query": sql_query, "results": data, "do_you_mean": do_you_mean}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1135,17 +1188,6 @@ if __name__ == "__main__":
     
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
-
-
-
-
-
-
-
-
-
 
 
 
