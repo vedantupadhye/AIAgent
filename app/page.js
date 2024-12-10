@@ -207,7 +207,7 @@ export default function Home() {
               transition={{ duration: 0.5 }}
             >
               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <p className="text-gray-800 dark:text-gray-200">{response.do_you_mean}</p>
+                <p className="text-gray-800 dark:text-gray-200">{response.recommendations && response.recommendations[0]?.recommendation_message}</p>
               </div>
 
               <div className="flex justify-center gap-4">
