@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import 'regenerator-runtime/runtime';
@@ -303,11 +302,21 @@ export default function Home() {
     </div>
   </motion.div>
 )}
+
         </motion.div>
       </div>
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 
