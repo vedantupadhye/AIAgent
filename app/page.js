@@ -39,7 +39,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme('light');
   const { transcript, browserSupportsSpeechRecognition } = useSpeechRecognition();
   const [submitted, setSubmitted] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -100,10 +100,24 @@ export default function Home() {
       setRejected(true);
     }
   };
+  const toggleTheme = () => {
+    if (!mounted) return; // Ensure this runs only when mounted
+  
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+  
+    // Update the HTML <body> class
+    document.documentElement.classList.remove(theme);
+    document.documentElement.classList.add(newTheme);
+  
+    // Save the new theme in localStorage
+    localStorage.setItem('theme', newTheme);
+  };
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 transition-colors duration-200 flex items-center justify-center">
-      <div className="container mx-auto max-w-3xl">
+      <div className="container mx-auto max-w-3xl my-auto">
         <motion.div 
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 relative"
           initial={{ opacity: 0, y: 100 }}
@@ -111,7 +125,7 @@ export default function Home() {
           transition={{ duration: 0.8 }}
         >
           <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={toggleTheme}
             className="absolute top-6 right-6 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             {theme === 'dark' ? (
@@ -119,8 +133,7 @@ export default function Home() {
             ) : (
               <FaMoon className="w-5 h-5 text-gray-700" />
             )}
-          </button>
-
+            </button>
           <motion.h1 
             className="text-4xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-[#4285f4] to-[#d96570] dark:from-[#4285f4] dark:to-[#d96570]"
             initial={{ opacity: 0, y: -20 }}
