@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import 'regenerator-runtime/runtime';
@@ -10,74 +8,61 @@ import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognitio
 import { FaMicrophone, FaArrowRight, FaSun, FaMoon } from "react-icons/fa";
 import { useTheme } from 'next-themes';
 
-const TypewriterText = ({ text }) => {
-  const [displayText, setDisplayText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    if (currentIndex < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayText(prev => prev + text[currentIndex]);
-        setCurrentIndex(currentIndex + 1);
-      }, 100);
-      return () => clearTimeout(timeout);
-    }
-  }, [currentIndex, text]);
-
-  return (
-    <span className="inline-block">
-      {displayText}
-      {currentIndex < text.length && <span className="animate-pulse">|</span>}
-    </span>
-  );
-};
-
 export default function Home() {
   const [question, setQuestion] = useState('');
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme('light');
   const { transcript, browserSupportsSpeechRecognition } = useSpeechRecognition();
-  const [submitted, setSubmitted] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
-  const [rejected, setRejected] = useState(false);
+  const [notconfirm, setNotConfirm] = useState(false);
+  const [originalResult, setOriginalResult] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingLoader, setIsEditingLoader] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    return () => {
+      SpeechRecognition.abortListening(); // Ensure no lingering listeners
+    };
   }, []);
 
-  if (!mounted) return null;
-
-  if (!browserSupportsSpeechRecognition) {
-    return (
-      <div className="flex items-center justify-center h-screen dark:bg-gray-900">
-        <p className="text-red-500 text-lg font-medium bg-red-50 dark:bg-red-900 px-6 py-4 rounded-lg">
-          Your browser doesn't support speech recognition.
-        </p>
-      </div>
-    );
-  }
+  const editQuestion = () => {
+    setIsEditing(true);
+    setIsEditingLoader(true);
+    setTimeout(() => {
+      setIsEditing(false);
+      setIsEditingLoader(false);
+      setResponse(null);
+      setConfirmed(false);
+      setNotConfirm(false);
+      setError(null);
+    }, 5000);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     setResponse(null);
     setIsLoading(true);
-    setSubmitted(true);
     setConfirmed(false);
-    setRejected(false);
+    setNotConfirm(false);
+    setOriginalResult(null);
 
     try {
-      const res = await axios.post('http://localhost:8000/query', { text: question });
+      const res = await axios.post('http://localhost:8000/rec1', { text: question });
       setResponse(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'An error occurred');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleConfirm = () => {
+    setConfirmed(true);
   };
 
   const startListening = () => {
@@ -88,226 +73,492 @@ export default function Home() {
   const stopListening = () => {
     SpeechRecognition.stopListening();
     setIsListening(false);
-    setQuestion(transcript);
+    setTimeout(() => {
+      setQuestion(transcript);
+    }, 300);
   };
 
-  const handleConfirm = (isConfirmed) => {
-    if (isConfirmed) {
-      setConfirmed(true);
-      setRejected(false);
-    } else {
-      setConfirmed(false);
-      setRejected(true);
-    }
-  };
   const toggleTheme = () => {
-    if (!mounted) return; // Ensure this runs only when mounted
-  
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
-  
-    // Update the HTML <body> class
-    document.documentElement.classList.remove(theme);
-    document.documentElement.classList.add(newTheme);
-  
-    // Save the new theme in localStorage
-    localStorage.setItem('theme', newTheme);
   };
-  
+
+  const RecommendedResultDisplay = ({ data }) => {
+    if (!data?.recommendations?.[0]) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
+      >
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Recommended Query:</h3>
+          <p className="text-gray-900 dark:text-gray-100">{data.recommendations[0].recommendation_message}</p>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query:</h3>
+          <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Description:</h3>
+          <p className="text-gray-900 dark:text-gray-100">{data.description}</p>
+        </div>
+      </motion.div>
+    );
+  };
+
+  const OriginalResultDisplay = ({ data }) => {
+    if (!data) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
+      >
+        <div>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query Results:</h3>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query </h3>
+          <pre className="text-sm text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 p-2 rounded my-3">
+            {data.query}
+          </pre>
+          <pre className="text-sm text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 p-2 rounded">
+            {data.results}
+          </pre>
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 transition-colors duration-200 flex items-center justify-center">
-      <div className="container mx-auto max-w-3xl my-auto">
-        <motion.div 
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 relative"
-          initial={{ opacity: 0, y: 100 }}
-          animate={submitted ? { y: -100, opacity: 1 } : { y: 0, opacity: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          <button
-            onClick={toggleTheme}
-            className="absolute top-6 right-6 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            {theme === 'dark' ? (
-              <FaSun className="w-5 h-5 text-yellow-500" />
-            ) : (
-              <FaMoon className="w-5 h-5 text-gray-700" />
-            )}
-            </button>
-          <motion.h1 
-            className="text-4xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-[#4285f4] to-[#d96570] dark:from-[#4285f4] dark:to-[#d96570]"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <TypewriterText text="SQL Query Generator" />
-          </motion.h1>
-          
-          <motion.form 
-            onSubmit={handleSubmit} 
-            className="relative flex flex-col items-center"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="relative w-full flex items-center mb-6">
-              <button
-                type="button"
-                onClick={isListening ? stopListening : startListening}
-                className={`absolute left-4 p-2 rounded-full transition-colors ${
-                  isListening 
-                    ? 'bg-red-100 dark:bg-red-900 text-red-500 hover:bg-red-200 dark:hover:bg-red-800' 
-                    : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400'
-                }`}
-              >
-                <FaMicrophone className="w-5 h-5" />
-              </button>
-
-              <input
-                type="text"
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="Type your question here or use the mic..."
-                className="w-full pl-14 pr-14 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
-              />
-
-              <button
-                type="submit"
-                className="absolute right-4 p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 dark:hover:bg-blue-400 transition-colors disabled:opacity-50"
-                disabled={isLoading}
-              >
-                <FaArrowRight className="w-5 h-5" />
-              </button>
-            </div>
-          </motion.form>
-
-          {isLoading && (
-            <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-              <p className="ml-3 text-blue-500 dark:text-blue-400 font-medium">Generating response...</p>
-            </div>
-          )}
-
-          {error && (
-            <motion.div 
-              className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 p-4 rounded-lg"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <p className="text-red-700 dark:text-red-400">{error}</p>
-            </motion.div>
-          )}
-
-          {response && !confirmed && !rejected && (
-            <motion.div
-              className="mt-6 space-y-4"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <p className="text-gray-800 dark:text-gray-200">{response.recommendations && response.recommendations[0]?.recommendation_message}</p>
-              </div>
-
-              <div className="flex justify-center gap-4">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  onClick={() => handleConfirm(true)}
-                  className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-md shadow-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-                >
-                  Yes
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                  onClick={() => handleConfirm(false)}
-                  className="px-8 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-md shadow-lg hover:from-red-600 hover-to-pink-600 focus:outline-none focus:ring-2 focus:ring-red-300"
-                >
-                  No
-                </motion.button>
-              </div>
-            </motion.div>
-          )}
-
-          {rejected && (
-            <motion.div
-              className="mt-6 bg-yellow-50 dark:bg-yellow-900/50 border-l-4 border-yellow-500 p-4 rounded-lg"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <p className="text-yellow-700 dark:text-yellow-400">Please input a valid query</p>
-            </motion.div>
-          )}
-
-          {confirmed && response && (
-            <motion.div 
-              className="space-y-6 mt-6"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div>
-                <h3 className="text-lg font-semibold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-200flex items-center">
-                  <span className="w-2 h-2  rounded-full mr-2"></span>
-                  Generated SQL Query
-                </h3>
-                <motion.pre 
-                  className="bg-gray-800 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm text-gray-100 font-mono"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  {response.query}
-                </motion.pre>
-              </div>
-
-              <div>
-      <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200 flex items-center">
-        <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-        Query Results
-      </h3>
-      <div className="bg-gray-800 dark:bg-gray-900 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          {response.results.map((row, index) => {
-            const hasNullValue = Object.values(row).some(value => value === null);                    
-            return (
-              <motion.div
-                key={index}
-                className="p-3 border-b border-gray-700 last:border-0 hover:bg-gray-700 dark:hover:bg-gray-600"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: index * 0.1, duration: 0.2 }}
-              >
-                {hasNullValue ? (
-                  <div className="text-gray-400">No values for the given input</div>
-                ) : (
-                  response.columns.map((column, colIndex) => (
-                    <div key={column} className="flex justify-between py-1">
-                      {/* <span className="text-gray-200">{column}</span> */}
-                      <span className="text-gray-200">
-                        {row[colIndex]} {response.matched_unit}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </motion.div>
-            );
-          })}
+    <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''} flex justify-center`}>
+      <div className="container mx-auto p-6 space-y-6 max-w-4xl">
+        <div className="flex justify-between items-center">
+          {/* <button onClick={toggleTheme} className="p-2 bg-gray-200 dark:bg-gray-700 rounded">
+            {theme === 'dark' ? <FaSun /> : <FaMoon />}
+          </button> */}
+          <h1 className="text-xl font-bold items-center content-center text-center">SQL Query Generator</h1>
         </div>
-      </div>
-    </div>
-  </motion.div>
-)}
-        </motion.div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <input
+            type="text"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="Type your query..."
+            className="p-3 border rounded w-full text-gray-800 dark:text-gray-200 dark:bg-gray-700"
+          />
+          <div className="flex flex-wrap gap-4">
+            <button type="submit" className="p-2 bg-blue-500 text-white rounded shadow-md hover:bg-blue-600 flex-1">
+              Submit
+            </button>
+            <button
+              type="button"
+              onClick={isListening ? stopListening : startListening}
+              className="p-2 bg-gray-300 dark:bg-gray-700 rounded shadow-md flex-1"
+            >
+              <FaMicrophone />
+            </button>
+          </div>
+        </form>
+        {isLoading && <p className="text-center text-blue-500">Loading...</p>}
+        {error && <p className="text-center text-red-500">{error}</p>}
+
+        {response && !confirmed && !notconfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-4 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md"
+          >
+            <p className="text-gray-700 dark:text-gray-300">Did you mean:</p>
+            <p className="text-gray-900 dark:text-gray-100">{response.recommendations[0]?.recommendation_message}</p>
+            <div className="flex flex-wrap gap-4 mt-4">
+              <button
+                onClick={handleConfirm}
+                className="p-2 bg-green-500 text-white rounded shadow-md hover:bg-green-600 flex-1"
+              >
+                Yes
+              </button>
+              {isEditingLoader && (
+                <p className="text-center text-yellow-500">Please wait... Editing is disabled for 5 seconds.</p>
+              )}
+              <button
+                className="p-2 bg-black text-white rounded shadow-md flex-1"
+                onClick={editQuestion}
+              >
+                Edit Question
+              </button>
+            </div>
+          </motion.div>
+        )}
+        {confirmed && response && <RecommendedResultDisplay data={response} />}
+        {notconfirm && originalResult && <OriginalResultDisplay data={originalResult} />}
       </div>
     </div>
   );
 }
+
+
+// result={JSON.stringify(response, null, 2)} 
+
+  // const handleNo = async () => {
+  //   try {
+  //     const { data } = await axios.post('http://localhost:8000/query', { text: question });
+  //     setNotConfirm(true);
+  //     setOriginalResult(data);
+  //   } catch (error) {
+  //     console.error('Error in handleNo:', error);
+  //     setError('An error occurred while processing your query.');
+  //   }
+  // };
+
+ {/* <button 
+              className="mt-2 p-2 bg-red-500 text-white rounded shadow-md hover:bg-red-600" 
+              onClick={handleNo}
+            >
+              Continue with your query
+            </button> */}
+
+
+
+
+
+
+// "use client";
+
+// import 'regenerator-runtime/runtime';
+// import { useState, useEffect } from 'react';
+// import axios from 'axios';
+// import { motion } from 'framer-motion';
+// import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
+// import { FaMicrophone, FaArrowRight, FaSun, FaMoon } from "react-icons/fa";
+// import { useTheme } from 'next-themes';
+
+// const TypewriterText = ({ text }) => {
+//   const [displayText, setDisplayText] = useState('');
+//   const [currentIndex, setCurrentIndex] = useState(0);
+
+//   useEffect(() => {
+//     if (currentIndex < text.length) {
+//       const timeout = setTimeout(() => {
+//         setDisplayText(prev => prev + text[currentIndex]);
+//         setCurrentIndex(currentIndex + 1);
+//       }, 100);
+//       return () => clearTimeout(timeout);
+//     }
+//   }, [currentIndex, text]);
+
+//   return (
+//     <span className="inline-block">
+//       {displayText}
+//       {currentIndex < text.length && <span className="animate-pulse">|</span>}
+//     </span>
+//   );
+// };
+
+
+// export default function ConfirmationPage() {
+//   async function handleConfirm() {
+//     "use server"; // Server action directive
+
+//     try {
+//       const res = await fetch("/api/rec1", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ text: "Your query here" }), // Replace with actual query text
+//       });
+
+//       if (!res.ok) {
+//         throw new Error("Failed to fetch query and recommendations");
+//       }
+
+//       const data = await res.json();
+//       return data;
+//     } catch (error) {
+//       console.error(error);
+//       throw new Error("An error occurred while fetching data.");
+//     }
+//   }
+// }
+// export default function Home() {
+//   const [question, setQuestion] = useState('');
+//   const [response, setResponse] = useState(null);
+//   const [error, setError] = useState(null);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [isListening, setIsListening] = useState(false);
+//   const [mounted, setMounted] = useState(false);
+//   const { theme, setTheme } = useTheme('light');
+//   const { transcript, browserSupportsSpeechRecognition } = useSpeechRecognition();
+//   const [submitted, setSubmitted] = useState(false);
+//   const [confirmed, setConfirmed] = useState(false);
+//   const [rejected, setRejected] = useState(false);
+
+//   useEffect(() => {
+//     setMounted(true);
+//   }, []);
+
+//   if (!mounted) return null;
+
+//   if (!browserSupportsSpeechRecognition) {
+//     return (
+//       <div className="flex items-center justify-center h-screen dark:bg-gray-900">
+//         <p className="text-red-500 text-lg font-medium bg-red-50 dark:bg-red-900 px-6 py-4 rounded-lg">
+//           Your browser doesn't support speech recognition.
+//         </p>
+//       </div>
+//     );
+//   }
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setError(null);
+//     setResponse(null);
+//     setIsLoading(true);
+//     setSubmitted(true);
+//     setConfirmed(false);
+//     setRejected(false);
+
+//     try {
+//       const res = await axios.post('http://localhost:8000/rec1', { text: question });
+//       setResponse(res.data);
+//     } catch (err) {
+//       setError(err.response?.data?.detail || 'An error occurred');
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const startListening = () => {
+//     SpeechRecognition.startListening({ continuous: true, language: 'en-US' });
+//     setIsListening(true);
+//   };
+
+//   const stopListening = () => {
+//     SpeechRecognition.stopListening();
+//     setIsListening(false);
+//     setQuestion(transcript);
+//   };
+
+//   const handleConfirm = (isConfirmed) => {
+//     if (isConfirmed) {
+//       setConfirmed(true);
+//       setRejected(false);
+//     } else {
+//       setConfirmed(false);
+//       setRejected(true);
+//     }
+//   };
+//   const toggleTheme = () => {
+//     if (!mounted) return; // Ensure this runs only when mounted
+  
+//     const newTheme = theme === 'dark' ? 'light' : 'dark';
+//     setTheme(newTheme);
+  
+//     // Update the HTML <body> class
+//     document.documentElement.classList.remove(theme);
+//     document.documentElement.classList.add(newTheme);
+  
+//     // Save the new theme in localStorage
+//     localStorage.setItem('theme', newTheme);
+//   };
+  
+
+//   return (
+//     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 py-8 px-4 transition-colors duration-200 flex items-center justify-center">
+//       <div className="container mx-auto max-w-3xl my-auto">
+//         <motion.div 
+//           className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-6 md:p-8 relative"
+//           initial={{ opacity: 0, y: 100 }}
+//           animate={submitted ? { y: -100, opacity: 1 } : { y: 0, opacity: 1 }}
+//           transition={{ duration: 0.8 }}
+//         >
+//           <button
+//             onClick={toggleTheme}
+//             className="absolute top-6 right-6 p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+//           >
+//             {theme === 'dark' ? (
+//               <FaSun className="w-5 h-5 text-yellow-500" />
+//             ) : (
+//               <FaMoon className="w-5 h-5 text-gray-700" />
+//             )}
+//             </button>
+//           <motion.h1 
+//             className="text-4xl font-bold mb-6 text-center bg-clip-text text-transparent bg-gradient-to-r from-[#4285f4] to-[#d96570] dark:from-[#4285f4] dark:to-[#d96570]"
+//             initial={{ opacity: 0, y: -20 }}
+//             animate={{ opacity: 1, y: 0 }}
+//             transition={{ duration: 0.5 }}
+//           >
+//             <TypewriterText text="SQL Query Generator" />
+//           </motion.h1>
+          
+//           <motion.form 
+//             onSubmit={handleSubmit} 
+//             className="relative flex flex-col items-center"
+//             initial={{ opacity: 0, scale: 0.95 }}
+//             animate={{ opacity: 1, scale: 1 }}
+//             transition={{ duration: 0.5 }}
+//           >
+//             <div className="relative w-full flex items-center mb-6">
+//               <button
+//                 type="button"
+//                 onClick={isListening ? stopListening : startListening}
+//                 className={`absolute left-4 p-2 rounded-full transition-colors ${
+//                   isListening 
+//                     ? 'bg-red-100 dark:bg-red-900 text-red-500 hover:bg-red-200 dark:hover:bg-red-800' 
+//                     : 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400'
+//                 }`}
+//               >
+//                 <FaMicrophone className="w-5 h-5" />
+//               </button>
+
+//               <input
+//                 type="text"
+//                 value={question}
+//                 onChange={(e) => setQuestion(e.target.value)}
+//                 placeholder="Type your question here or use the mic..."
+//                 className="w-full pl-14 pr-14 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+//               />
+
+//               <button
+//                 type="submit"
+//                 className="absolute right-4 p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 dark:hover:bg-blue-400 transition-colors disabled:opacity-50"
+//                 disabled={isLoading}
+//               >
+//                 <FaArrowRight className="w-5 h-5" />
+//               </button>
+//             </div>
+//           </motion.form>
+
+//           {isLoading && (
+//             <div className="flex items-center justify-center">
+//               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+//               <p className="ml-3 text-blue-500 dark:text-blue-400 font-medium">Generating response...</p>
+//             </div>
+//           )}
+
+//           {error && (
+//             <motion.div 
+//               className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 p-4 rounded-lg"
+//               initial={{ opacity: 0 }}
+//               animate={{ opacity: 1 }}
+//               transition={{ duration: 0.3 }}
+//             >
+//               <p className="text-red-700 dark:text-red-400">{error}</p>
+//             </motion.div>
+//           )}
+
+//           {response && !confirmed && !rejected && (
+//             <motion.div
+//               className="mt-6 space-y-4"
+//               initial={{ opacity: 0, y: 10 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               transition={{ duration: 0.5 }}
+//             >
+//               <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+//                <p className="text-gray-800 dark:text-gray-200">{response.recommendations && response.recommendations[0]?.recommendation_message}</p> 
+//                {/* <p className="text-gray-800 dark:text-gray-200">{response.do_you_mean}</p>   */}
+//               </div>
+
+//               <div className="flex justify-center gap-4">
+//                 <motion.button
+//                   whileHover={{ scale: 1.05 }}
+//                   whileTap={{ scale: 0.95 }}
+//                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
+//                   onClick={() => handleConfirm(true)}
+//                   className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-md shadow-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+//                 >
+//                   Yes
+//                 </motion.button>
+//                 <motion.button
+//                   whileHover={{ scale: 1.05 }}
+//                   whileTap={{ scale: 0.95 }}
+//                   transition={{ type: "spring", stiffness: 300, damping: 30 }}
+//                   onClick={() => handleConfirm(false)}
+//                   className="px-8 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-md shadow-lg hover:from-red-600 hover-to-pink-600 focus:outline-none focus:ring-2 focus:ring-red-300"
+//                 >
+//                   No
+//                 </motion.button>
+//               </div>
+//             </motion.div>
+//           )}
+
+//           {rejected && (
+//             <motion.div
+//               className="mt-6 bg-yellow-50 dark:bg-yellow-900/50 border-l-4 border-yellow-500 p-4 rounded-lg"
+//               initial={{ opacity: 0 }}
+//               animate={{ opacity: 1 }}
+//               transition={{ duration: 0.3 }}
+//             >
+//               <p className="text-yellow-700 dark:text-yellow-400">Please input a valid query</p>
+//             </motion.div>
+//           )}
+
+//           {confirmed && response && (
+//             <motion.div 
+//               className="space-y-6 mt-6"
+//               initial={{ opacity: 0, y: 20 }}
+//               animate={{ opacity: 1, y: 0 }}
+//               transition={{ duration: 0.5 }}
+//             >
+//               <div>
+//                 <h3 className="text-lg font-semibold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-blue-400 dark:from-blue-400 dark:to-blue-200flex items-center">
+//                   <span className="w-2 h-2  rounded-full mr-2"></span>
+//                   Generated SQL Query
+//                 </h3>
+//                 <motion.pre 
+//                   className="bg-gray-800 dark:bg-gray-900 p-4 rounded-lg overflow-x-auto text-sm text-gray-100 font-mono"
+//                   initial={{ opacity: 0 }}
+//                   animate={{ opacity: 1 }}
+//                   transition={{ duration: 0.5 }}
+//                 >
+//                   {response.query}
+//                 </motion.pre>
+//               </div>
+
+//               <div>
+//       <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-200 flex items-center">
+//         <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+//         Query Results
+//       </h3>
+//       <div className="bg-gray-800 dark:bg-gray-900 rounded-lg overflow-hidden">
+//         <div className="overflow-x-auto">
+//           {response.results.map((row, index) => {
+//             const hasNullValue = Object.values(row).some(value => value === null);                    
+//             return (
+//               <motion.div
+//                 key={index}
+//                 className="p-3 border-b border-gray-700 last:border-0 hover:bg-gray-700 dark:hover:bg-gray-600"
+//                 initial={{ opacity: 0 }}
+//                 animate={{ opacity: 1 }}
+//                 transition={{ delay: index * 0.1, duration: 0.2 }}
+//               >
+//                 {hasNullValue ? (
+//                   <div className="text-gray-400">No values for the given input</div>
+//                 ) : (
+//                   response.columns.map((column, colIndex) => (
+//                     <div key={column} className="flex justify-between py-1">
+//                       {/* <span className="text-gray-200">{column}</span> */}
+//                       <span className="text-gray-200">
+//                         {row[colIndex]} {response.matched_unit}
+//                       </span>
+//                     </div>
+//                   ))
+//                 )}
+//               </motion.div>
+//             );
+//           })}
+//         </div>
+//       </div>
+//     </div>
+//   </motion.div>
+// )}
+//         </motion.div>
+//       </div>
+//     </div>
+//   );
+// }
 
 
 
