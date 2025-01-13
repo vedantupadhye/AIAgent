@@ -83,31 +83,113 @@ export default function Home() {
     setTheme(newTheme);
   };
 
-  const RecommendedResultDisplay = ({ data }) => {
-    if (!data?.recommendations?.[0]) return null;
+  // const RecommendedResultDisplay = ({ data }) => {
+  //   if (!data?.recommendations?.[0]) return null;
 
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
-      >
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Recommended Query:</h3>
-          <p className="text-gray-900 dark:text-gray-100">{data.recommendations[0].recommendation_message}</p>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query:</h3>
-          <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Description:</h3>
-          <p className="text-gray-900 dark:text-gray-100">{data.description}</p>
-        </div>
-      </motion.div>
-    );
-  };
+  //   return (
+  //     <motion.div
+  //       initial={{ opacity: 0, y: 10 }}
+  //       animate={{ opacity: 1, y: 0 }}
+  //       transition={{ duration: 0.5 }}
+  //       className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
+  //     >
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Recommended Query:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.recommendations[0].recommendation_message}</p>
+  //       </div>
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
+  //       </div>
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Description:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.description}</p>
+  //       </div>
+  //     </motion.div>
+  //   );
+  // };
+
+
+
+const RecommendedResultDisplay = ({ data }) => {
+  if (!data?.recommendations?.[0]) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
+    >
+      {/* Recommended Query */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          Recommended Query:
+        </h3>
+        <p className="text-gray-900 dark:text-gray-100">
+          {data.recommendations[0].recommendation_message}
+        </p>
+      </div>
+
+      {/* SQL Query */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          Query:
+        </h3>
+        <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
+      </div>
+
+      {/* Results */}
+      <div>
+        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+          Results:
+        </h3>
+        {data.gemini_output?.format === "table" && (
+          <div className="overflow-x-auto">
+            <table className="table-auto w-full border-collapse border border-gray-300 dark:border-gray-600">
+              <thead>
+                <tr className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                  {/* Table Headers */}
+                  {data.gemini_output.headers.map((header, index) => (
+                    <th
+                      key={index}
+                      className="px-4 py-2 border border-gray-300 dark:border-gray-600"
+                    >
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {/* Table Rows */}
+                {data.gemini_output.rows.map((row, rowIndex) => (
+                  <tr
+                    key={rowIndex}
+                    className="hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    {row.map((cell, cellIndex) => (
+                      <td
+                        key={cellIndex}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
+                      >
+                        {cell}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {data.gemini_output?.format === "text" && (
+          <p className="text-gray-900 dark:text-gray-100">
+            {data.gemini_output.description}
+          </p>
+        )}
+      </div>
+    </motion.div>
+  );
+};
 
   const OriginalResultDisplay = ({ data }) => {
     if (!data) return null;
@@ -173,7 +255,7 @@ export default function Home() {
             className="mt-4 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md"
           >
             <p className="text-gray-700 dark:text-gray-300">Did you mean:</p>
-            <p className="text-gray-900 dark:text-gray-100">{response.recommendations[0]?.recommendation_message}</p>
+              <p className="text-gray-900 dark:text-gray-100">{response.recommendations[0]?.recommendation_message}</p> 
             <div className="flex flex-wrap gap-4 mt-4">
               <button
                 onClick={handleConfirm}
