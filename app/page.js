@@ -7,6 +7,8 @@ import { motion } from 'framer-motion';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FaMicrophone, FaArrowRight, FaSun, FaMoon } from "react-icons/fa";
 import { useTheme } from 'next-themes';
+import Selection from './selection'
+import BarChart from './BarChart'
 
 export default function Home() {
   const [question, setQuestion] = useState('');
@@ -82,38 +84,10 @@ export default function Home() {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
   };
-
-  // const RecommendedResultDisplay = ({ data }) => {
-  //   if (!data?.recommendations?.[0]) return null;
-
-  //   return (
-  //     <motion.div
-  //       initial={{ opacity: 0, y: 10 }}
-  //       animate={{ opacity: 1, y: 0 }}
-  //       transition={{ duration: 0.5 }}
-  //       className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
-  //     >
-  //       <div>
-  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Recommended Query:</h3>
-  //         <p className="text-gray-900 dark:text-gray-100">{data.recommendations[0].recommendation_message}</p>
-  //       </div>
-  //       <div>
-  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query:</h3>
-  //         <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
-  //       </div>
-  //       <div>
-  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Description:</h3>
-  //         <p className="text-gray-900 dark:text-gray-100">{data.description}</p>
-  //       </div>
-  //     </motion.div>
-  //   );
-  // };
-
-
-
 const RecommendedResultDisplay = ({ data }) => {
   if (!data?.recommendations?.[0]) return null;
 
+ 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -187,6 +161,13 @@ const RecommendedResultDisplay = ({ data }) => {
           </p>
         )}
       </div>
+     
+      {data.gemini_output?.format === "graph" && (
+        <div className="w-full">       
+         <BarChart data={data.gemini_output} />
+         
+        </div>
+      )} 
     </motion.div>
   );
 };
@@ -215,6 +196,9 @@ const RecommendedResultDisplay = ({ data }) => {
     );
   };
 
+
+
+
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''} flex justify-center`}>
       <div className="container mx-auto p-6 space-y-6 max-w-4xl">
@@ -232,10 +216,12 @@ const RecommendedResultDisplay = ({ data }) => {
             placeholder="Type your query..."
             className="p-3 border rounded w-full text-gray-800 dark:text-gray-200 dark:bg-gray-700"
           />
+            <Selection />
           <div className="flex flex-wrap gap-4">
             <button type="submit" className="p-2 bg-blue-500 text-white rounded shadow-md hover:bg-blue-600 flex-1">
               Submit
             </button>
+          
             <button
               type="button"
               onClick={isListening ? stopListening : startListening}
@@ -243,6 +229,7 @@ const RecommendedResultDisplay = ({ data }) => {
             >
               <FaMicrophone />
             </button>
+            
           </div>
         </form>
         {isLoading && <p className="text-center text-blue-500">Loading...</p>}
@@ -303,6 +290,35 @@ const RecommendedResultDisplay = ({ data }) => {
               Continue with your query
             </button> */}
 
+
+
+
+
+  // const RecommendedResultDisplay = ({ data }) => {
+  //   if (!data?.recommendations?.[0]) return null;
+
+  //   return (
+  //     <motion.div
+  //       initial={{ opacity: 0, y: 10 }}
+  //       animate={{ opacity: 1, y: 0 }}
+  //       transition={{ duration: 0.5 }}
+  //       className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
+  //     >
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Recommended Query:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.recommendations[0].recommendation_message}</p>
+  //       </div>
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
+  //       </div>
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Description:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.description}</p>
+  //       </div>
+  //     </motion.div>
+  //   );
+  // };
 
 
 
