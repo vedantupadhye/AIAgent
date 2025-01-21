@@ -9,6 +9,8 @@ import { FaMicrophone, FaArrowRight, FaSun, FaMoon } from "react-icons/fa";
 import { useTheme } from 'next-themes';
 import Selection from './selection'
 import BarChart from './BarChart'
+// import TableComponent from './TableComponent'
+import TableWithExport from './TableWithExport'
 
 export default function Home() {
   const [question, setQuestion] = useState('');
@@ -88,6 +90,7 @@ const RecommendedResultDisplay = ({ data }) => {
   if (!data?.recommendations?.[0]) return null;
 
  
+ 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -119,41 +122,7 @@ const RecommendedResultDisplay = ({ data }) => {
           Results:
         </h3>
         {data.gemini_output?.format === "table" && (
-          <div className="overflow-x-auto">
-            <table className="table-auto w-full border-collapse border border-gray-300 dark:border-gray-600">
-              <thead>
-                <tr className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                  {/* Table Headers */}
-                  {data.gemini_output.headers.map((header, index) => (
-                    <th
-                      key={index}
-                      className="px-4 py-2 border border-gray-300 dark:border-gray-600"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {/* Table Rows */}
-                {data.gemini_output.rows.map((row, rowIndex) => (
-                  <tr
-                    key={rowIndex}
-                    className="hover:bg-gray-100 dark:hover:bg-gray-700"
-                  >
-                    {row.map((cell, cellIndex) => (
-                      <td
-                        key={cellIndex}
-                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                      >
-                        {cell}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TableWithExport data={data} />
         )}
         {data.gemini_output?.format === "text" && (
           <p className="text-gray-900 dark:text-gray-100">
@@ -171,6 +140,7 @@ const RecommendedResultDisplay = ({ data }) => {
     </motion.div>
   );
 };
+
 
   const OriginalResultDisplay = ({ data }) => {
     if (!data) return null;

@@ -22,17 +22,17 @@ const Selection = () => {
         <option value="good_yield">Good Yield</option>
       </select>
 
-      {/* Render additional inputs based on the selected option */}
+     
       {selectedOption === "good_coils" && (
         <div className="mt-4">
           <input
-            type="text"
-            placeholder="+/-13"
+            type="number"
+            placeholder=" Width = +/-13"
             className="p-2 border border-gray-300 rounded mb-2 w-full"
           />
           <input
-            type="text"
-            placeholder="0.013"
+            type="number"
+            placeholder="thickness = +/-0.013"
             className="p-2 border border-gray-300 rounded w-full"
           />
         </div>

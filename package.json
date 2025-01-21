@@ -18,6 +18,8 @@
     "eslint": "8.57.1",
     "eslint-config-next": "14.2.11",
     "framer-motion": "^11.11.17",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^2.5.2",
     "next": "^15.0.3",
     "next-themes": "^0.4.3",
     "postcss": "8.4.47",
@@ -30,7 +32,8 @@
     "recharts": "^2.13.3",
     "regenerator-runtime": "^0.14.1",
     "tailwind": "^4.0.0",
-    "tailwindcss": "^3.4.15"
+    "tailwindcss": "^3.4.15",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "22.10.1",
