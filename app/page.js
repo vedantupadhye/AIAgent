@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FaMicrophone, FaArrowRight, FaSun, FaMoon } from "react-icons/fa";
 import { useTheme } from 'next-themes';
-import Selection from './selection'
+import Selection from './Selection';
 import BarChart from './BarChart'
 // import TableComponent from './TableComponent'
 import TableWithExport from './TableWithExport'
