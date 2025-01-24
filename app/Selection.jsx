@@ -76,9 +76,9 @@ const Selection = () => {
 
       <div className="mt-6">
         <h3 className="text-lg font-bold">Current Values:</h3>
-        <pre className="bg-gray-100 p-4 text-black rounded text-sm mt-2">
+        <p className="bg-gray-100 p-4 text-black rounded text-sm mt-2">
           {JSON.stringify(values, null, 2)}
-        </pre>
+        </p>
       </div>
     </div>
   );
