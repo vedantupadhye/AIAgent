@@ -4,38 +4,35 @@ import html2canvas from 'html2canvas';
 
 const TableWithExport = ({ data }) => {
   const exportToPDF = async () => {
-    // Get the table element
     const table = document.querySelector('.table-container');
     if (!table) return;
-
     try {
-      // Show loading state
       const button = document.querySelector('.export-button');
       if (button) button.textContent = 'Exporting...';
 
-      // Create the PDF
+      const originalColor = table.style.color;
+      const originalBgColor = table.style.backgroundColor;
+      table.style.color = 'white';
+      table.style.backgroundColor = 'black';
+
       const canvas = await html2canvas(table);
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
 
-      // Calculate dimensions
       const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
       const aspectRatio = canvas.height / canvas.width;
-      const imgWidth = pageWidth - 20; // Leave 10mm margin on each side
+      const imgWidth = pageWidth - 20;
       const imgHeight = imgWidth * aspectRatio;
 
-      // Add title
+      pdf.setTextColor(0, 0, 0); 
       pdf.setFontSize(16);
       pdf.text('Table Export', 10, 10);
-
-      // Add the table image
       pdf.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
 
-      // Save the PDF
       pdf.save('table-export.pdf');
+      table.style.color = originalColor;
+      table.style.backgroundColor = originalBgColor;
 
-      // Reset button text
       if (button) button.textContent = 'Export to PDF';
     } catch (error) {
       console.error('Failed to export PDF:', error);
@@ -52,23 +49,23 @@ const TableWithExport = ({ data }) => {
               onClick={exportToPDF}
               className="export-button bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
             >
-              <svg 
-                className="w-5 h-5" 
-                fill="none" 
-                stroke="currentColor" 
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                 />
               </svg>
               <span>Export to PDF</span>
             </button>
           </div>
-          
+
           <div className="table-container overflow-x-auto rounded-lg shadow">
             <table className="table-auto w-full border-collapse border border-gray-300 dark:border-gray-600">
               <thead>
@@ -109,3 +106,166 @@ const TableWithExport = ({ data }) => {
 };
 
 export default TableWithExport;
+
+
+
+
+
+
+// import React, { useState } from 'react';
+// import jsPDF from 'jspdf';
+// import html2canvas from 'html2canvas';
+
+// const TableWithExport = ({ data }) => {
+//   const [filterText, setFilterText] = useState('');
+//   const [sortColumn, setSortColumn] = useState(null);
+//   const [sortOrder, setSortOrder] = useState('asc'); // 'asc' or 'desc'
+
+//     const exportToPDF = async () => {
+//     const table = document.querySelector('.table-container');
+//     if (!table) return;
+
+//     try {
+//       const button = document.querySelector('.export-button');
+//       if (button) button.textContent = 'Exporting...';
+
+//       // Temporarily set table styles for proper rendering in PDF
+//       const originalColor = table.style.color;
+//       const originalBgColor = table.style.backgroundColor;
+//       table.style.color = 'white';
+//       table.style.backgroundColor = 'black';
+
+//       // Generate canvas and PDF
+//       const canvas = await html2canvas(table);
+//       const imgData = canvas.toDataURL('image/png');
+//       const pdf = new jsPDF('p', 'mm', 'a4');
+
+//       const pageWidth = pdf.internal.pageSize.getWidth();
+//       const aspectRatio = canvas.height / canvas.width;
+//       const imgWidth = pageWidth - 20;
+//       const imgHeight = imgWidth * aspectRatio;
+
+//       pdf.setTextColor(0, 0, 0); 
+//       pdf.setFontSize(16);
+//       pdf.text('Table Export', 10, 10);
+//       pdf.addImage(imgData, 'PNG', 10, 20, imgWidth, imgHeight);
+
+//       pdf.save('table-export.pdf');
+
+//       // Restore original styles
+//       table.style.color = originalColor;
+//       table.style.backgroundColor = originalBgColor;
+
+//       if (button) button.textContent = 'Export to PDF';
+//     } catch (error) {
+//       console.error('Failed to export PDF:', error);
+//       alert('Failed to export PDF. Please try again.');
+//     }
+//   };
+//   // **Filtering Logic* 
+//   const filteredRows = data.gemini_output.rows.filter((row) =>
+//     row.some((cell) => cell.toString().toLowerCase().includes(filterText.toLowerCase()))
+//   );
+
+//   // **Sorting  **
+//     const sortedRows = [...filteredRows].sort((a, b) => {
+//     if (sortColumn === null) return 0; // No sorting if no column selected
+//     const valueA = a[sortColumn];
+//     const valueB = b[sortColumn];
+
+//     if (typeof valueA === 'number' && typeof valueB === 'number') {
+//       return sortOrder === 'asc' ? valueA - valueB : valueB - valueA;
+//     } else {
+//       return sortOrder === 'asc'
+//         ? valueA.toString().localeCompare(valueB.toString())
+//         : valueB.toString().localeCompare(valueA.toString());
+//     }
+//   });
+
+//   return (
+//     <div className="space-y-4">
+//       {/* **Filter and Sorting Controls** */}
+//       <div className="flex justify-between mb-4 space-x-4">
+//         <input
+//           type="text"
+//           placeholder="Filter table..."
+//           value={filterText}
+//           onChange={(e) => setFilterText(e.target.value)}
+//           className="border bg-gray-600 px-4 py-2 rounded-md"
+//         />
+
+//         {/* Sorting Dropdown */}
+//         <select
+//           value={sortColumn !== null ? sortColumn : ''}
+//           onChange={(e) => setSortColumn(e.target.value ? Number(e.target.value) : null)}
+//           className="border bg-gray-600 px-4 py-2 rounded-md"
+//         >
+//           <option value="">Sort by column</option>
+//           {data.gemini_output.headers.map((header, index) => (
+//             <option key={index} value={index}>
+//               {header}
+//             </option>
+//           ))}
+//         </select>
+
+//         {/* Sorting Order Button */}
+//         <button
+//           onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+//           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
+//         >
+//           {sortOrder === 'asc' ? 'Ascending 🔼' : 'Descending 🔽'}
+//         </button>
+//       </div>
+
+//       {/* **Table Display** */}
+//       <div className="table-container overflow-x-auto rounded-lg shadow">
+//         <table className="table-auto w-full border-collapse border border-gray-300 dark:border-gray-600">
+//           <thead>
+//             <tr className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+//               {data.gemini_output.headers.map((header, index) => (
+//                 <th key={`header-${index}`} className="px-4 py-2 border border-gray-300 dark:border-gray-600">
+//                   {header}
+//                 </th>
+//               ))}
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {sortedRows.map((row, rowIndex) => (
+//               <tr key={`row-${rowIndex}`} className="hover:bg-gray-100 dark:hover:bg-gray-700">
+//                 {row.map((cell, cellIndex) => (
+//                   <td key={`cell-${rowIndex}-${cellIndex}`} className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100">
+//                     {cell}
+//                   </td>
+//                 ))}
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+//       </div>     
+//       <div className="flex justify-end mb-4">
+//                <button
+//               onClick={exportToPDF}
+//               className="export-button bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md transition-colors duration-200 flex items-center space-x-2"
+//             >
+//               <svg
+//                 className="w-5 h-5"
+//                 fill="none"
+//                 stroke="currentColor"
+//                 viewBox="0 0 24 24"
+//               >
+//                 <path
+//                   strokeLinecap="round"
+//                   strokeLinejoin="round"
+//                   strokeWidth={2}
+//                   d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+//                 />
+//               </svg>
+//               <span>Export to PDF</span>
+//             </button>
+//           </div>
+//     </div>
+//   );
+// };
+
+// export default TableWithExport;
+

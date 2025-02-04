@@ -1,3 +1,5 @@
+"use client"
+import axios from "axios";
 import { useState } from "react";
 
 const Selection = () => {
@@ -7,6 +9,17 @@ const Selection = () => {
     good_coils_thickness: "",
     good_yield: "",
   });
+  const [newData, setNewData] = useState(null); 
+
+  const handleSubmit = async () => {
+    try {
+      const response = await axios.post("http://localhost:8000/inputval", values);
+      setNewData(response.data); 
+    } catch (error) {
+      console.error("Error submitting data:", error);
+      alert("Failed to submit data. Check the console for more details.");
+    }
+  };
 
   const handleSelectionChange = (e) => {
     setSelectedOption(e.target.value);
@@ -73,13 +86,22 @@ const Selection = () => {
           </label>
         </div>
       )}
+      <button
+        className="bg-blue-500 p-2 text-white rounded-md mt-4"
+        onClick={handleSubmit}
+      >
+        Submit
+      </button>
 
-      <div className="mt-6">
-        <h3 className="text-lg font-bold">Current Values:</h3>
-        <p className="bg-gray-100 p-4 text-black rounded text-sm mt-2">
-          {JSON.stringify(values, null, 2)}
-        </p>
-      </div>
+      {/* Render result */}
+      {newData && (
+        <div className="mt-6">
+          <h3 className="text-lg font-bold">Result:</h3>
+          <p className="bg-gray-100 p-4 text-black rounded text-sm mt-2">
+            Good Coils Count: {newData.good_quality_count}
+          </p>
+        </div>
+      )}
     </div>
   );
 };

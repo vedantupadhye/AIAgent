@@ -1,5 +1,4 @@
-"use client";
-
+"use client"
 import 'regenerator-runtime/runtime';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -7,10 +6,10 @@ import { motion } from 'framer-motion';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
 import { FaMicrophone, FaArrowRight, FaSun, FaMoon } from "react-icons/fa";
 import { useTheme } from 'next-themes';
-import Selection from './Selection';
-import BarChart from './BarChart'
-// import TableComponent from './TableComponent'
-import TableWithExport from './TableWithExport'
+import BarChart from './BarChart';
+import TableWithExport from './TableWithExport';
+import Link from 'next/link';
+import RecommendedResultDisplay from './RecommendedResultDisplay';
 
 export default function Home() {
   const [question, setQuestion] = useState('');
@@ -26,10 +25,12 @@ export default function Home() {
   const [originalResult, setOriginalResult] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLoader, setIsEditingLoader] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [yieldValue, setYieldValue] = useState("97"); // Initialize with default value
 
   useEffect(() => {
     return () => {
-      SpeechRecognition.abortListening(); // Ensure no lingering listeners
+      SpeechRecognition.abortListening();
     };
   }, []);
 
@@ -46,6 +47,16 @@ export default function Home() {
     }, 5000);
   };
 
+  const handleSelectionChange = (e) => {
+    setSelectedOption(e.target.value);
+  };
+
+  const handleYieldChange = (e) => {
+    // Remove any % symbol and store only the number
+    const value = e.target.value.replace('%', '');
+    setYieldValue(value);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
@@ -56,7 +67,12 @@ export default function Home() {
     setOriginalResult(null);
 
     try {
-      const res = await axios.post('http://localhost:8000/rec1', { text: question });
+      const requestData = {
+        text: question,
+        good_yield: selectedOption === 'good_yield' ? yieldValue : "97" // Use default if not selected
+      };
+
+      const res = await axios.post('http://localhost:8000/rec1', requestData);
       setResponse(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'An error occurred');
@@ -83,64 +99,8 @@ export default function Home() {
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
-const RecommendedResultDisplay = ({ data }) => {
-  if (!data?.recommendations?.[0]) return null;
-
- 
- 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
-    >
-      {/* Recommended Query */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Recommended Query:
-        </h3>
-        <p className="text-gray-900 dark:text-gray-100">
-          {data.recommendations[0].recommendation_message}
-        </p>
-      </div>
-
-      {/* SQL Query */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Query:
-        </h3>
-        <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
-      </div>
-
-      {/* Results */}
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">
-          Results:
-        </h3>
-        {data.gemini_output?.format === "table" && (
-          <TableWithExport data={data} />
-        )}
-        {data.gemini_output?.format === "text" && (
-          <p className="text-gray-900 dark:text-gray-100">
-            {data.gemini_output.description}
-          </p>
-        )}
-      </div>
-     
-      {data.gemini_output?.format === "graph" && (
-        <div className="w-full">       
-         <BarChart data={data.gemini_output} />
-         
-        </div>
-      )} 
-    </motion.div>
-  );
-};
-
 
   const OriginalResultDisplay = ({ data }) => {
     if (!data) return null;
@@ -154,7 +114,7 @@ const RecommendedResultDisplay = ({ data }) => {
       >
         <div>
           <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query Results:</h3>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query </h3>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query</h3>
           <pre className="text-sm text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 p-2 rounded my-3">
             {data.query}
           </pre>
@@ -166,18 +126,21 @@ const RecommendedResultDisplay = ({ data }) => {
     );
   };
 
-
-
-
   return (
     <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''} flex justify-center`}>
       <div className="container mx-auto p-6 space-y-6 max-w-4xl">
         <div className="flex justify-between items-center">
-          {/* <button onClick={toggleTheme} className="p-2 bg-gray-200 dark:bg-gray-700 rounded">
+          <button 
+            onClick={toggleTheme} 
+            className="p-2 bg-gray-200 dark:bg-gray-700 rounded"
+          >
             {theme === 'dark' ? <FaSun /> : <FaMoon />}
-          </button> */}
-          <h1 className="text-xl font-bold items-center content-center text-center">SQL Query Generator</h1>
+          </button>
+          <h1 className="text-xl font-bold items-center content-center text-center">
+            SmartAgent
+          </h1>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
             type="text"
@@ -186,12 +149,43 @@ const RecommendedResultDisplay = ({ data }) => {
             placeholder="Type your query..."
             className="p-3 border rounded w-full text-gray-800 dark:text-gray-200 dark:bg-gray-700"
           />
-            <Selection />
+
+          <div className="p-4 bg-gray-800 rounded-lg">
+            <h1 className="text-white mb-4">Custom Input</h1>
+            <div className="space-y-4">
+              <select 
+                className="w-full p-2 bg-white rounded text-gray-800"
+                onChange={handleSelectionChange} 
+                value={selectedOption}
+              >
+                <option value="" disabled>Select an option</option>
+                <option value="good_yield">Good Yield</option>
+              </select>
+
+              {selectedOption === 'good_yield' && (
+                <div className="mt-4">
+                  <label className="block mb-2">
+                    <span className="text-white">Yield (%):</span>
+                    <input
+                      type="text"
+                      placeholder="Enter yield (e.g., 97)"
+                      className="mt-1 p-2 border border-gray-300 rounded w-full text-white"
+                      value={yieldValue}
+                      onChange={handleYieldChange}
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-4">
-            <button type="submit" className="p-2 bg-blue-500 text-white rounded shadow-md hover:bg-blue-600 flex-1">
+            <button 
+              type="submit" 
+              className="p-2 bg-blue-500 text-white rounded shadow-md hover:bg-blue-600 flex-1"
+            >
               Submit
             </button>
-          
             <button
               type="button"
               onClick={isListening ? stopListening : startListening}
@@ -199,9 +193,9 @@ const RecommendedResultDisplay = ({ data }) => {
             >
               <FaMicrophone />
             </button>
-            
           </div>
         </form>
+
         {isLoading && <p className="text-center text-blue-500">Loading...</p>}
         {error && <p className="text-center text-red-500">{error}</p>}
 
@@ -212,7 +206,9 @@ const RecommendedResultDisplay = ({ data }) => {
             className="mt-4 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md"
           >
             <p className="text-gray-700 dark:text-gray-300">Did you mean:</p>
-              <p className="text-gray-900 dark:text-gray-100">{response.recommendations[0]?.recommendation_message}</p> 
+            <p className="text-gray-900 dark:text-gray-100">
+              {response.recommendations[0]?.recommendation_message}
+            </p>
             <div className="flex flex-wrap gap-4 mt-4">
               <button
                 onClick={handleConfirm}
@@ -221,7 +217,9 @@ const RecommendedResultDisplay = ({ data }) => {
                 Yes
               </button>
               {isEditingLoader && (
-                <p className="text-center text-yellow-500">Please wait... Editing is disabled for 5 seconds.</p>
+                <p className="text-center text-yellow-500">
+                  Please wait... Editing is disabled for 5 seconds.
+                </p>
               )}
               <button
                 className="p-2 bg-black text-white rounded shadow-md flex-1"
@@ -232,13 +230,13 @@ const RecommendedResultDisplay = ({ data }) => {
             </div>
           </motion.div>
         )}
+
         {confirmed && response && <RecommendedResultDisplay data={response} />}
         {notconfirm && originalResult && <OriginalResultDisplay data={originalResult} />}
       </div>
     </div>
   );
 }
-
 
 // result={JSON.stringify(response, null, 2)} 
 
