@@ -122,6 +122,7 @@
 
 
 // correccted
+
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import TableWithExport from './TableWithExport';
@@ -266,3 +267,5 @@ const RecommendedResultDisplay = ({ data }) => {
 };
 
 export default RecommendedResultDisplay;
+
+

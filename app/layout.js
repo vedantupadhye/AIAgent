@@ -1,6 +1,7 @@
 import './globals.css'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
+import Sidebar from './Sidebar'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -13,13 +14,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning  >
       <body className={inter.className} >
-        <ThemeProvider 
-          attribute="class" 
-          defaultTheme="system" 
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <div className="min-h-screen flex bg-gray-50 dark:bg-gray-900 pl-14">
+            <Sidebar />
+            <main className="flex-1 max-w-5xl mx-auto px-10 py-8">{children}</main>
+          </div>
+
         </ThemeProvider>
       </body>
     </html>
