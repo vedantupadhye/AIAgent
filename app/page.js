@@ -1,12 +1,94 @@
-"use client";
-
+"use client"
 import 'regenerator-runtime/runtime';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence  } from 'framer-motion';
 import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition';
-import { FaMicrophone, FaArrowRight, FaSun, FaMoon } from "react-icons/fa";
+import { FaMicrophone, FaArrowRight, FaSun, FaMoon, FaChevronDown } from "react-icons/fa";
 import { useTheme } from 'next-themes';
+import BarChart from './BarChart';
+import TableWithExport from './TableWithExport';
+import Link from 'next/link';
+import RecommendedResultDisplay from './RecommendedResultDisplay';
+import Sidebar from './Sidebar';
+import FAQ from './FAQ'
+import { MdOutlineSettingsInputComposite } from "react-icons/md";
+import { IoSend } from "react-icons/io5";
+import QuerySearch from './QuerySearch';
+// const FAQData = [
+//   { question: "What is the average coil weight for each day? " },
+//   { question: "Coil with the most width for each shift? " },
+//   { question: "What is the grade wise production for each shift " },
+//   { question: "number of good coils produced for each day " },
+//   { question: "number of good yield coils with weight more than 22 tons" },
+//   { question: "What is the average coil weight for each day? " },
+// ];
+
+// const FAQ = ({ setQuestion }) => {
+//   const [expandedIndex, setExpandedIndex] = useState(null);
+//   const [hoveredIndex, setHoveredIndex] = useState(null);
+
+//   return (
+//     <div className="w-full max-w-7xl mx-auto px-4">
+//       <motion.div
+//         initial={{ opacity: 0, y: 20 }}
+//         animate={{ opacity: 1, y: 0 }}
+//         transition={{ duration: 0.6 }}
+//         className="space-y-8"
+//       >
+//         <h2 className="text-4xl font-bold text-center bg-gradient-to-r from-teal-400 via-cyan-500 to-indigo-500 text-transparent bg-clip-text mb-12">
+//           Frequently Asked Questions
+//         </h2>
+        
+//         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+//           {FAQData.map((faq, index) => (
+//             <motion.div
+//               key={index}
+//               initial={{ opacity: 0, scale: 0.95 }}
+//               animate={{ opacity: 1, scale: 1 }}
+//               transition={{ duration: 0.3, delay: index * 0.1 }}
+//               onHoverStart={() => setHoveredIndex(index)}
+//               onHoverEnd={() => setHoveredIndex(null)}
+//               className="relative"
+//             >
+//               <motion.div
+//                 animate={{
+//                   scale: hoveredIndex === index ? 1.02 : 1,
+//                   boxShadow: hoveredIndex === index 
+//                     ? "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)"
+//                     : "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+//                 }}
+//                 className="h-full bg-gradient-to-br from-white via-white to-gray-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700"
+//               >
+//                 <button
+//                   onClick={() => {
+//                     setExpandedIndex(expandedIndex === index ? null : index);
+//                     setQuestion(faq.question);
+//                   }}
+//                   className="w-full h-full p-6 text-left group"
+//                 >
+//                   <div className="flex justify-between items-start gap-4">
+//                     <h3 className="font-semibold text-gray-800 dark:text-gray-200 group-hover:text-cyan-500 transition-colors duration-200">
+//                       {faq.question}
+//                     </h3>
+//                     <motion.div
+//                       animate={{ rotate: expandedIndex === index ? 180 : 0 }}
+//                       transition={{ duration: 0.3 }}
+//                       className="mt-1 flex-shrink-0"
+//                     >                      
+//                     </motion.div>
+//                   </div>
+//                 </button>
+//               </motion.div>
+//             </motion.div>
+//           ))}
+//         </div>
+//       </motion.div>
+//     </div>
+//   );
+// };
+
+
 
 export default function Home() {
   const [question, setQuestion] = useState('');
@@ -22,12 +104,25 @@ export default function Home() {
   const [originalResult, setOriginalResult] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingLoader, setIsEditingLoader] = useState(false);
+  const [selectedOption, setSelectedOption] = useState("");
+  const [yieldValue, setYieldValue] = useState("97"); 
+  const [widthValue , setWidthValue] = useState("13");
+  const [ thicknessValue , setThicknessValue] = useState("0.013");
+  const [showFAQ, setShowFAQ] = useState(true);
+  const [success, setSuccess] = useState(null);
+  const [showCustomInput, setShowCustomInput] = useState(false);
 
   useEffect(() => {
     return () => {
-      SpeechRecognition.abortListening(); // Ensure no lingering listeners
+      SpeechRecognition.abortListening();
     };
   }, []);
+  
+    const handleSelectSuggestion = (query) => {
+      setQuestion(query);
+      setShowSuggestions(false);
+    };
+
 
   const editQuestion = () => {
     setIsEditing(true);
@@ -42,17 +137,76 @@ export default function Home() {
     }, 5000);
   };
 
+  const handleSelectionChange = (e) => {
+    setSelectedOption(e.target.value);
+  };
+
+  const handleYieldChange = (e) => {
+    const value = e.target.value.replace('%', '');
+    setYieldValue(value);
+  };
+
+  const handleWidthChange = (e)=>{
+    setWidthValue(e.target.value);
+  }
+  
+  const handleThicknessChange = (e) =>{
+    setThicknessValue(e.target.value)
+  }
+
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setShowFAQ(false);
+  //   setError(null);
+  //   setResponse(null);
+  //   setIsLoading(true);
+  //   setConfirmed(false);
+  //   setNotConfirm(false);
+  //   setOriginalResult(null);
+
+  //   try {
+  //     const requestData = {
+  //       text: question,
+  //       good_yield: selectedOption === 'good_yield' ? yieldValue : "97",       
+  //     };
+
+  //     // post to backend 
+  //     const res = await axios.post('http://localhost:8000/rec1', requestData);
+
+  //     // post to mongodb
+
+  //     //  db call to post the question 
+
+  //     setResponse(res.data);
+  //   } catch (err) {
+  //     setError(err.response?.data?.detail || 'An error occurred');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setShowFAQ(false);
     setError(null);
     setResponse(null);
     setIsLoading(true);
     setConfirmed(false);
     setNotConfirm(false);
     setOriginalResult(null);
-
+  
     try {
-      const res = await axios.post('http://localhost:8000/rec1', { text: question });
+      const requestData = {
+        text: question,
+        good_yield: selectedOption === 'good_yield' ? yieldValue : "97",       
+      };
+  
+      // Post question to the chatbot backend
+      const res = await axios.post('http://localhost:8000/rec1', requestData);
+  
+      // Save the question history to MongoDB
+      await axios.post('/api/history', { text: question });
+  
       setResponse(res.data);
     } catch (err) {
       setError(err.response?.data?.detail || 'An error occurred');
@@ -60,6 +214,7 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+  
 
   const handleConfirm = () => {
     setConfirmed(true);
@@ -79,36 +234,10 @@ export default function Home() {
   };
 
   const toggleTheme = () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(newTheme);
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
-  const RecommendedResultDisplay = ({ data }) => {
-    if (!data?.recommendations?.[0]) return null;
-
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
-      >
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Recommended Query:</h3>
-          <p className="text-gray-900 dark:text-gray-100">{data.recommendations[0].recommendation_message}</p>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query:</h3>
-          <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Description:</h3>
-          <p className="text-gray-900 dark:text-gray-100">{data.description}</p>
-        </div>
-      </motion.div>
-    );
-  };
-
+  //  Result display 
   const OriginalResultDisplay = ({ data }) => {
     if (!data) return null;
 
@@ -121,7 +250,7 @@ export default function Home() {
       >
         <div>
           <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query Results:</h3>
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query </h3>
+          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query</h3>
           <pre className="text-sm text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 p-2 rounded my-3">
             {data.query}
           </pre>
@@ -133,72 +262,282 @@ export default function Home() {
     );
   };
 
+  const formAnimation = {
+    submit: {
+      scale: [1, 0.98, 1],
+      transition: { duration: 0.2 }
+    }
+  };
+  const headerAnimation = {
+    initial: { y: -20, opacity: 0 },
+    animate: { y: 0, opacity: 1 },
+    transition: { duration: 0.5 }
+  };
   return (
-    <div className={`min-h-screen ${theme === 'dark' ? 'dark' : ''} flex justify-center`}>
-      <div className="container mx-auto p-6 space-y-6 max-w-4xl">
-        <div className="flex justify-between items-center">
-          {/* <button onClick={toggleTheme} className="p-2 bg-gray-200 dark:bg-gray-700 rounded">
-            {theme === 'dark' ? <FaSun /> : <FaMoon />}
-          </button> */}
-          <h1 className="text-xl font-bold items-center content-center text-center">SQL Query Generator</h1>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="text"
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder="Type your query..."
-            className="p-3 border rounded w-full text-gray-800 dark:text-gray-200 dark:bg-gray-700"
-          />
-          <div className="flex flex-wrap gap-4">
-            <button type="submit" className="p-2 bg-blue-500 text-white rounded shadow-md hover:bg-blue-600 flex-1">
-              Submit
-            </button>
-            <button
-              type="button"
-              onClick={isListening ? stopListening : startListening}
-              className="p-2 bg-gray-300 dark:bg-gray-700 rounded shadow-md flex-1"
-            >
-              <FaMicrophone />
-            </button>
-          </div>
-        </form>
-        {isLoading && <p className="text-center text-blue-500">Loading...</p>}
-        {error && <p className="text-center text-red-500">{error}</p>}
-
-        {response && !confirmed && !notconfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="mt-4 bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md"
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <Sidebar />
+      <div className="max-w-5xl mx-auto px-4 pb-24">
+        {/* Header */}
+        <motion.div 
+          className="flex justify-between items-center mb-8"
+          {...headerAnimation}
+        >
+          <motion.button 
+            onClick={toggleTheme} 
+            className="p-3 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
-            <p className="text-gray-700 dark:text-gray-300">Did you mean:</p>
-            <p className="text-gray-900 dark:text-gray-100">{response.recommendations[0]?.recommendation_message}</p>
-            <div className="flex flex-wrap gap-4 mt-4">
-              <button
-                onClick={handleConfirm}
-                className="p-2 bg-green-500 text-white rounded shadow-md hover:bg-green-600 flex-1"
+            {theme === 'dark' ? <FaSun className="text-amber-400" /> : <FaMoon className="text-gray-600" />}
+          </motion.button>
+          <motion.h1 
+            className="text-2xl font-semibold bg-gradient-to-r from-purple-400 to-purple-700 text-transparent bg-clip-text"
+            whileHover={{ scale: 1.02 }}
+          >
+            <Link href="/">SmartAgent</Link>
+          </motion.h1>
+        </motion.div>
+
+        {/* Main Content Area */}
+        <div className="space-y-6">
+          {/* Show FAQ only when there's no response or confirmation */}
+          <AnimatePresence>
+            {showFAQ && !response && !isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
               >
-                Yes
-              </button>
-              {isEditingLoader && (
-                <p className="text-center text-yellow-500">Please wait... Editing is disabled for 5 seconds.</p>
+                <FAQ setQuestion={setQuestion} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Center aligned content for loading, confirmation, and results */}
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
+            {/* Loading State */}
+            {isLoading && (
+              <motion.div 
+                className="flex justify-center p-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <div className="text-blue-600 dark:text-blue-400">Processing your request...</div>
+              </motion.div>
+            )}
+            
+            {/* Error State */}
+            {error && (
+              <motion.div 
+                className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg w-full"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p className="text-red-600 dark:text-red-400 text-center">{error}</p>
+              </motion.div>
+            )}
+
+            {/* Confirmation Dialog */}
+            {response && !confirmed && !notconfirm && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 space-y-4 w-full"
+              >
+                <h3 className="text-lg font-medium text-gray-800 dark:text-white">Confirm</h3>
+                <p className="text-gray-600 dark:text-gray-300">
+                  {response.recommendations[0]?.recommendation_message}
+                </p>
+                <div className="flex gap-4">
+                  <motion.button
+                    onClick={handleConfirm}
+                    className="flex-1 p-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Confirm
+                  </motion.button>
+                  <motion.button
+                    onClick={editQuestion}
+                    className="flex-1 p-3 bg-gray-800 hover:bg-gray-900 text-white rounded-lg font-medium"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Edit Query
+                  </motion.button>
+                </div>
+                {isEditingLoader && (
+                  <p className="text-amber-500 dark:text-amber-400 text-center text-sm">
+                    Please wait... Editing will be available in 5 seconds.
+                  </p>
+                )}
+              </motion.div>
+            )}
+
+            {/* Results Display */}
+            <AnimatePresence>
+              {confirmed && response && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="w-full"
+                >
+                  <RecommendedResultDisplay data={response} />
+                </motion.div>
               )}
-              <button
-                className="p-2 bg-black text-white rounded shadow-md flex-1"
-                onClick={editQuestion}
-              >
-                Edit Question
-              </button>
-            </div>
-          </motion.div>
-        )}
-        {confirmed && response && <RecommendedResultDisplay data={response} />}
-        {notconfirm && originalResult && <OriginalResultDisplay data={originalResult} />}
+              {notconfirm && originalResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="w-full"
+                >
+                  <OriginalResultDisplay data={originalResult} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
+
+      {/* Fixed Bottom Input Section - QuerySearch*/}
+         
+      <motion.div 
+        className="fixed bottom-0 left-0 right-0 shadow-lg"
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+      >
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <motion.form 
+            onSubmit={handleSubmit}
+            variants={formAnimation}
+            animate="submit"
+          >
+            <div className="flex items-center mx-20 gap-3">
+              <input
+                type="text"
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Ask me anything about your data..."
+                className="flex-1 p-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+              
+              <motion.button
+                type="button"
+                onClick={() => setShowCustomInput(!showCustomInput)}
+                className="p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg shadow-sm hover:shadow-md transition-all"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <MdOutlineSettingsInputComposite />
+              </motion.button>
+
+              <motion.button
+                type="button"
+                onClick={isListening ? stopListening : startListening}
+                className="p-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg shadow-sm hover:shadow-md transition-all"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <FaMicrophone className="text-gray-600 dark:text-gray-300" />
+              </motion.button>
+
+              <motion.button 
+                type="submit"
+                className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-all"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <IoSend />
+              </motion.button>
+            </div>
+
+            {/* Custom Input Panel*/}
+            <AnimatePresence>
+              {showCustomInput && (
+                <motion.div 
+                  className="mt-4 bg-gray-50 dark:bg-gray-700 rounded-lg p-4"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <div className="space-y-4">
+                    <select 
+                      className="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200"
+                      onChange={handleSelectionChange} 
+                      value={selectedOption}
+                    >
+                      <option value="" disabled>Select custom input type</option>
+                      <option value="good_yield">Yield input</option>
+                      <option value="good_coil">Good coil values</option>
+                    </select>
+
+                    {selectedOption === 'good_yield' && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="space-y-4"
+                      >
+                        <label className="block">
+                          <span className="text-gray-700 dark:text-gray-300 block mb-2">Target Yield (%)</span>
+                          <input
+                            type="text"
+                            placeholder="e.g., 97"
+                            className="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200"
+                            value={yieldValue}
+                            onChange={handleYieldChange}
+                          />
+                        </label>
+                      </motion.div>
+                    )}
+
+                    {selectedOption === 'good_coil' && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="space-y-4"
+                      >
+                        <label className="block">
+                          <span className="text-gray-700 dark:text-gray-300 block mb-2">Width</span>
+                          <input
+                            type="text"
+                            placeholder="Enter width range"
+                            className="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200"
+                            value={widthValue}
+                            onChange={handleWidthChange}
+                          />
+                        </label>
+                        <label className="block">
+                          <span className="text-gray-700 dark:text-gray-300 block mb-2">Thickness</span>
+                          <input
+                            type="text"
+                            placeholder="Enter thickness range"
+                            className="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-800 dark:text-gray-200"
+                            value={thicknessValue}
+                            onChange={handleThicknessChange}
+                          />
+                        </label>
+                      </motion.div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.form>
+        </div>
+      </motion.div>
+      
     </div>
   );
 }
+
+
+
+
+
+
 
 
 // result={JSON.stringify(response, null, 2)} 
@@ -221,6 +560,35 @@ export default function Home() {
               Continue with your query
             </button> */}
 
+
+
+
+
+  // const RecommendedResultDisplay = ({ data }) => {
+  //   if (!data?.recommendations?.[0]) return null;
+
+  //   return (
+  //     <motion.div
+  //       initial={{ opacity: 0, y: 10 }}
+  //       animate={{ opacity: 1, y: 0 }}
+  //       transition={{ duration: 0.5 }}
+  //       className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md space-y-4"
+  //     >
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Recommended Query:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.recommendations[0].recommendation_message}</p>
+  //       </div>
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Query:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.query}</p>
+  //       </div>
+  //       <div>
+  //         <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300">Description:</h3>
+  //         <p className="text-gray-900 dark:text-gray-100">{data.description}</p>
+  //       </div>
+  //     </motion.div>
+  //   );
+  // };
 
 
 
